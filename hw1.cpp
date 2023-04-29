@@ -14,6 +14,8 @@ int main()
 	while ((token = yylex())) {
 		string str = string(yytext);
 		if (token == ERROR){
+			if (str == "\0" || str == "\x00" || str == "\r" || str == "\n" || str == "\t")
+				continue;
 			cout << tokenToStr(token) << " " << yytext << endl;
 			exit(0);
 		}
@@ -25,8 +27,8 @@ int main()
 			size_t found = str.find_last_of('\\');
 			string escape_seq = str.substr(found+1);
 			escape_seq = escape_seq.substr(0,3);
-			if(escape_seq[2] == '\"')
-				escape_seq = escape_seq.substr(0,2);
+			if(escape_seq[escape_seq.size() - 1] == '\"')
+				escape_seq = escape_seq.substr(0,escape_seq.size() - 1);
 			cout << "Error undefined escape sequence " << escape_seq << endl;
 			exit(0);
 		}
@@ -38,32 +40,33 @@ int main()
 		}
 		else if(token == STRING){
 			str = str.substr(1,str.size()-2);
+			string result;
 			cout << yylineno << " " << tokenToStr(token) << " ";
 			for(unsigned int i = 0; i<str.size(); i++){
 				if(str[i] == '\\'){
 					if (i+1 < str.size()) {
-						switch (str[i+1]){
+						switch (str[i+1]) {
 							case 'n':
-								cout << '\n';
+								result += '\n';
 								break;
 							case 't':
-								cout << '\t';
+								result += '\t';
 								break;
 							case 'r':
-								cout << '\r';
+								result += '\r';
 								break;
 							case '0':
-								cout << '\0';
+								result += '\0';
 								break;
 							case '"':
-								cout << '\"';
+								result += '\"';
 								break;
 							case '\\':
-								cout << '\\';
+								result += '\\';
 								break;
 							case 'x':
-								unsigned int x = std::stoul('0'+str.substr(i+1, i+4), nullptr, 16);
-								cout << char(x);
+								unsigned int x = std::stoul('0'+str.substr(i+1, 3), nullptr, 16);
+								result += char(x);
 								i += 2;							
 								break;						
 						}
@@ -71,9 +74,9 @@ int main()
 					}
 				}
 				else
-					cout << str[i];
+					result += str[i];
 			}
-			cout << endl;
+			cout << result.c_str() << endl;
 		}
 		else if(token == COMMENT){
 			str = str.substr(0,2);
